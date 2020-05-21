@@ -1,3 +1,5 @@
+from typing import List, Any
+
 import cell
 
 
@@ -5,7 +7,9 @@ class Grid:
     """
     grid object
     """
-    cell_list = []
+    cell_list: List[cell.Cell] = []
+    id_list: List[int] = []
+
     def __init__(self, width, height):
         """
         The __init__ method initializes the grid object
@@ -13,13 +17,21 @@ class Grid:
         Attributes:
             width (int): number of cells the grid measures as width
             height (int): number of cells the grid measures as height
+            day (int): the number of days the model is running
         """
+        self.day = 0;
         self.width = width
         self.height = height
+        # TODO: rewrite the transition from I -> R
+        self.infection_phase_threshold = 7
+
+        # TODO: rewrite, is this correct?
+        self.beta = 0.1
         # create list of Cells, with x and y coordinates
         for wi in range(width):
             for hi in range(height):
                 self.cell_list.append(cell.Cell(wi, hi, self))
+                self.id_list.append(id(self.cell_list[-1]))
 
                 # self.cell_list.append([cell.Cell(wi, hi, self), wi, hi])
 
@@ -71,9 +83,28 @@ class Grid:
     #     return False
 
     def step(self):
-        """ take one time step"""
+        """ take one time step
+
+        set one time step, every cell checks its neighbors and defines the expected state. When the swing gate is open
+        the new states are set according to the expected state.
+
+        """
+        # plus one day
+        self.day += 1
+
+        # every cell is given its direct neighbors
         self.assign_neighbor_ids()
-        # TODO: check neighbor requirements i.e. when is an 'adjecent' cell taken into account?
+        # let every cell check it's neighbors, and prepare the next state
+        # (otherwise future states may already influence
+        for cell_to_update in self.cell_list:
+            cell_to_update.evaluate_a_day()
+        # open the swing gate en update all states
+        for cell_to_update in self.cell_list:
+            new_state_row = cell_to_update.compartment_table[-1]
+            for i in range(len(cell_to_update.model_type)):
+                if new_state_row[i]:
+                    cell_to_update.compartment = cell_to_update.model_type[i]
+        # TODO: check neighbor requirements i.e. when is an 'adjacent' cell taken into account?
         #
         # for now check if there are cells around the cell of interest and retrieve their state
         # default case: a cell has 8 neighbours
@@ -83,6 +114,7 @@ if __name__ == "__main__":
     myGrid = Grid(9, 9)
     # state = myGrid.state(1, 1)
     # print("state van 1, 1, is: " + state)
-    myGrid.assign_neighbor_ids()
+    myGrid.step()
+
     air = 'lucht'
     print("klaar")
