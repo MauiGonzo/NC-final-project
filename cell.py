@@ -58,7 +58,7 @@ class Cell:
             # apply infection rule
             # count days infected, if above threshold move to 'R' state
             days_infected = sum(self.compartment_table[1:0])
-            # TODO: make this smarter :)
+            # TODO: make this transition smarter :)
             if sum(self.compartment_table[1, :]) > self.grid.infection_phase_threshold:
                 # do I -> R
                 self.compartment_table.append([0, 0, 1])
@@ -68,6 +68,7 @@ class Cell:
         # if self is 'S' transition to I is possible, depending on neighbors
         elif self.compartment == 'S':
             # evaluate neighbors, for every neighbor there is a chance beta of getting infected
+            # TODO: add the other neighbors
             # evaluate the left neighbor
             if self.left_id is not 0:
                 # find this left neighbor - using the quick lookup list
