@@ -37,13 +37,11 @@ class SIRGui:
         self.start()
         if mode == 'auto':
             self.window.after(self.FRAME_RATE, self.update)
-        elif mode == 'manual':
-            self.manual_update(None)
         self.window.mainloop()
 
     def start(self):
         """ This method is run once before the simulation starts. """
-        self.SIR = Grid(self.cols, self.rows)
+        self.SIR = Grid(self.cols, self.rows, radius=1)
         self.SIR.infect(25, 25)
         data = pd.DataFrame(self.SIR.get_states())
         self.cvs.start()

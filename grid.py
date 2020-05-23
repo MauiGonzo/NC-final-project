@@ -15,7 +15,7 @@ class Grid:
     cell_list: List[List[cell.Cell]] = []
     id_list: List[int] = []
 
-    def __init__(self, width, height):
+    def __init__(self, width, height, radius):
         """
         The __init__ method initializes the grid object
 
@@ -27,6 +27,7 @@ class Grid:
         self.day = 0
         self.width = width
         self.height = height
+        self.radius = radius
         # TODO: rewrite the transition from I -> R
         self.infection_phase_threshold = 7
 
@@ -117,7 +118,7 @@ class Grid:
         temp = copy.deepcopy(self.cell_list)
         for col in range(self.width):
             for row in range(self.height):
-                temp[col][row].compartment = self.evaluate_cell(col, row, radius=1)
+                temp[col][row].compartment = self.evaluate_cell(col, row, radius=self.radius)
                 # TODO: update cells state history
         self.cell_list = temp
 
