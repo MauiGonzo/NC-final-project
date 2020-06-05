@@ -116,46 +116,41 @@ class Grid:
 
         state = self.cell_list[x][y].compartment
 
+        if random.random() < 1 / self.infection_phase_threshold:
+            transition = True
+        else:
+            transition = False
 
-        if state == 'I':
-            if random.random() < 1 / self.infection_phase_threshold:
-                transition = True
-            else:
-                transition = False
+        infect_count = 0
 
-            infect_count = 0
+        while random.random() < self.beta:
+            infect_count += 1
 
-            while random.random() < self.beta:
-                infect_count += 1
+        neighbourlist = []
+        for x, y in self.get_neighbours(x, y, radius=radius):
+            if self.cell_list[x][y].compartment == 'S':
+                neighbourlist.append((x, y))
 
-            neighbourlist = []
-            for x, y in self.get_neighbours(x, y, radius=radius):
-                if self.cell_list[x][y].compartment == 'S':
-                    neighbourlist.append((x, y))
-
-            if len(neighbourlist) <= infect_count:
-                return transition, neighbourlist
-            elif len(neighbourlist) == 0:
-                return transition, None
-            else:
-                for i in range(len(neighbourlist) - infect_count):
-                    neighbourlist.remove(random.choice(neighbourlist))
-                return transition, neighbourlist
-
-
+        if not neighbourlist:
+            return transition, []
+        elif len(neighbourlist) > infect_count:
+            for _ in range(len(neighbourlist) - infect_count):
+                neighbourlist.remove(random.choice(neighbourlist))
+        return transition, neighbourlist
 
     def step(self):
-
         temp = copy.deepcopy(self.cell_list)
-        for row in range(self.width):
-            for col in range(self.height):
-                if temp[col][row].compartment == 'I':
-                    transition, neighbours = self.cell_behaviour(row, col)
+        for row in range(self.height):
+            for col in range(self.width):
+                if self.cell_list[col][row].compartment == 'I':
+                    transition, neighbours = self.cell_behaviour(col, row)
                     if transition:
-                        self.recover(row, col)
-                    if neighbours != None:
-                        for i in neighbours:
-                            self.infect(i[0], i[1])
+                        temp[col][row].compartment = 'R'
+                    if neighbours:
+                        for (nc, nr) in neighbours:
+                            if temp[nc][nr].compartment == 'S':
+                                temp[nc][nr].compartment = 'I'
+        self.cell_list = temp
 
 
 
