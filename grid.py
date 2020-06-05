@@ -1,5 +1,4 @@
 import copy
-import math
 import random
 import numpy as np
 import pandas as pd
@@ -16,7 +15,7 @@ class Grid:
     cell_list: List[List[cell.Cell]] = []
     id_list: List[int] = []
 
-    def __init__(self, width, height, neighbours='radius', **kwargs):
+    def __init__(self, width, height, radius):
         """
         The __init__ method initializes the grid object
 
@@ -24,50 +23,61 @@ class Grid:
             width (int): number of cells the grid measures as width
             height (int): number of cells the grid measures as height
             day (int): the number of days the model is running
-        
-        Keyword arguments:
-            neighbours (str):   which method to use when selecting methods
-                                valid options are: radius, random, gauss, all and gradient
-            radius (int):       radius of cells that are considered a neighbour
-                                used when neighbours are selected based on radius
-            nr_of_neighbours(int): number of neighbours that are considered in step
-                                used when neighbours are selected randomly
-            SD (int):           standard deviation of the gaussian
-                                used when neighoubrs are selected randomly using a gaussian
         """
         self.day = 0
         self.width = width
         self.height = height
-        self.neighbours = neighbours
-
-        self.radius = kwargs.get('radius', 1)
-        self.nr_of_neighbours = kwargs.get('nr_of_neighbours', 8)
-        self.SD = kwargs.get('SD', self.width)
-
+        self.radius = radius
         # TODO: rewrite the transition from I -> R
-        self.infection_phase_threshold = 7
+        self.infection_phase_threshold = 2.2
 
         # TODO: rewrite, is this correct?
-        self.beta = 0.1
+        self.beta = 0.76
 
         # create list of Cells, with x and y coordinates
         self.cell_list = [[] for _ in range(self.width)]
         for col in range(width):
             for row in range(height):
                 self.cell_list[col].append(cell.Cell(col, row, self))
+                # self.id_list.append(id(self.cell_list[-1]))
 
-    def get_neighbours(self, x, y):
-        """ Returns a list of coordinates of cells neighbouring the cell at x, y. """
-        if self.neighbours == 'radius':
-            return self._get_neighbours_in_radius(x, y, self.radius)
-        if self.neighbours == 'random':
-            return self._get_neighbours_randomly(x, y, self.nr_of_neighbours)
-        if self.neighbours == 'gauss':
-            return self._get_neighbours_gaussian(x, y, self.nr_of_neighbours, self.SD)
-        if self.neighbours == 'all':
-            return self._get_neighbours_all(x, y)
+                # self.cell_list.append([cell.Cell(wi, hi, self), wi, hi])
 
-    def _get_neighbours_in_radius(self, x, y, radius):
+    def assign_neighbor_ids(self):
+        # for every Cell assign it's neighbors
+        # costly, but should count as an investment, only one call per step
+        for i, targetcell in enumerate(self.cell_list):
+            # set left neighbor if possible, else id = 0
+            if (i%self.width) is not 0:
+                leftcell = self.cell_list[i-1]
+                targetcell.left_id = id(leftcell)
+            else:
+                targetcell.left_id = 0
+            # set right neighbor if possible, else id = 0
+            if ((i+1)%(self.width)) is not 0:
+                rightcell = self.cell_list[i+1]
+                targetcell.right_id = id(rightcell)
+            else:
+                targetcell.right_id = 0
+            # set upper neighbor if possible, else id = 0
+            if i > self.width:
+                uppercell = self.cell_list[i-self.width]
+                targetcell.upper_id = id(uppercell)
+            else:
+                targetcell.upper_id = 0
+            # set lower neighbor if possible, else id = 0
+            if i < (len(self.cell_list) - self.width):
+                lowercell = self.cell_list[i + self.width]
+                targetcell.lower_id = id(lowercell)
+            else:
+                targetcell.lower_id = 0
+
+    def randomize_cell_list(self):
+        # shuffle cell_list, so the instances are shuffeled
+        # reassign all the x, y locations
+        pass
+
+    def get_neighbours(self, x, y, radius=1):
         """ Returns a list of coordinates of cells neighbouring the cell at x, y. """
         neigh = []
         for col in range(x-radius, x+radius+1):
@@ -79,62 +89,19 @@ class Grid:
                 # Modulo makes the grid loop around so we don't have to worry about border cases.
                 neigh.append((col % self.width, row % self.height))
         return neigh
-    
-    def _get_neighbours_randomly(self, x, y, nr_of_neighbours):
-        """ Returns a list of randomly sampled neighbours where each cell has an equal chance of being sampled. """
-        neigh = []
-        while len(neigh) < nr_of_neighbours:
-            col = random.randint(0, self.width-1)
-            row = random.randint(0, self.height-1)
-            if (col, row) == (x, y) or (col, row) in neigh:
-                continue
-            else:
-                neigh.append((col, row))
-        return neigh
 
-    def _get_neighbours_gaussian(self, x, y, nr_of_neighbours, SD=2):
-        """ Returns a list of randomly sampled neighbours where cells closer to x,y have a higher chance of being sampled. """
-        neigh = []
-        while len(neigh) < nr_of_neighbours:
-            col = (x + int(random.gauss(0, SD))) % (self.width)
-            row = (y + int(random.gauss(0, SD))) % (self.height)
-            if (col, row) == (x, y) or (col, row) in neigh:
-                continue
-            else:
-                neigh.append((col, row))
-        return neigh
-
-    def get_dist(self, a, b):
-        """ Computes the distance between point a and point b. """
-        a = np.array(a)
-        b = np.array(b)
-        dist = np.linalg.norm(a-b)
-        return dist
-
-    def evaluate_cell(self, x, y):
+    def evaluate_cell(self, x, y, radius=1):
         """ Evaluates the state of cell at x, y based on it's neighbours. """
         # Get current state
         state = self.cell_list[x][y].compartment
-        # If state is recovered, no further computing is needed
+        # If state is recoverd, no further computing is needed
         if state == 'R':
-            self.cell_list[x][y].compartment_table.append(state)
             return 'R'
         # Set initial counts to 0
         neighbor_states = {'S': 0, 'I': 0, 'R': 0}
         # Count states of neighbours
-        if self.neighbours == 'all':
-            for c in range(self.width):
-                for r in range(self.height):
-                    if (c, r) != (x, y):
-                        neighbor_states[self.cell_list[c][r].compartment] += 1
-        if self.neighbours == 'gradient':
-            for c in range(self.width):
-                for r in range(self.height):
-                    if (c, r) != (x, y):
-                        neighbor_states[self.cell_list[c][r].compartment] += math.log10(1-(1/self.get_dist((c, r), (x, y)))+1e-9)
-        else:
-            for x, y in self.get_neighbours(x, y):
-                neighbor_states[self.cell_list[x][y].compartment] += 1
+        for x, y in self.get_neighbours(x, y, radius=radius):
+            neighbor_states[self.cell_list[x][y].compartment] += 1
         # Get random number
         chance = random.random()
         # Return evaluated state
@@ -145,19 +112,70 @@ class Grid:
         else:
             return state
 
+    def cell_behaviour(self, x, y, radius=1):
+
+        state = self.cell_list[x][y].compartment
+
+
+        if state == 'I':
+            if random.random() < 1 / self.infection_phase_threshold:
+                transition = True
+            else:
+                transition = False
+
+            infect_count = 0
+
+            while random.random() < self.beta:
+                infect_count += 1
+
+            neighbourlist = []
+            for x, y in self.get_neighbours(x, y, radius=radius):
+                if self.cell_list[x][y].compartment == 'S':
+                    neighbourlist.append((x, y))
+
+            if len(neighbourlist) <= infect_count:
+                return transition, neighbourlist
+            elif len(neighbourlist) == 0:
+                return transition, None
+            else:
+                for i in range(len(neighbourlist) - infect_count):
+                    neighbourlist.remove(random.choice(neighbourlist))
+                return transition, neighbourlist
+
+
+
     def step(self):
-        """ Evaluates the state of all cells in the grid. """
-        # Copy grid so updating of cells doesn't affect neighbor states
+
         temp = copy.deepcopy(self.cell_list)
-        for col in range(self.width):
-            for row in range(self.height):
-                temp[col][row].compartment = self.evaluate_cell(col, row)
-                temp[col][row].add_compartment_day(temp[col][row].compartment)
-        self.cell_list = temp
+        for row in range(self.width):
+            for col in range(self.height):
+                if temp[col][row].compartment == 'I':
+                    transition, neighbours = self.cell_behaviour(row, col)
+                    if transition:
+                        self.recover(row, col)
+                    if neighbours != None:
+                        for i in neighbours:
+                            self.infect(i[0], i[1])
+
+
+
+    # def step(self):
+    #     """ Evaluates the state of all cells in the grid. """
+    #     # Copy grid so updating of cells doesn't affect neighbor states
+    #     temp = copy.deepcopy(self.cell_list)
+    #     for col in range(self.width):
+    #         for row in range(self.height):
+    #             temp[col][row].compartment = self.evaluate_cell(col, row, radius=self.radius)
+    #             # TODO: update cells state history
+    #     self.cell_list = temp
 
     def infect(self, x, y):
-        """ Sets state of cell at x, y to I=infected. """
+        """ Sets state of cell at x, y to infected. """
         self.cell_list[x][y].compartment = 'I'
+
+    def recover(self, x, y):
+        """ Sets state of cell at x, y to recovered. """
+        self.cell_list[x][y].compartment = 'R'
 
     def get_states(self):
         """ Returns a grid of state indicators. """
@@ -168,11 +186,52 @@ class Grid:
                 states[col].append(classes.index(self.cell_list[col][row].compartment))
         return states
 
+    # def state(self, x, y):
+    #     """ return state of a cell, if cell NA return false"""
+    #     # check candidate x and y vs grid boundaries
+    #     if x >= self.width | y >= self.height:
+    #         return False
+    #     # test all candidate cells
+    #     for ccell in self.cell_list:
+    #         if ccell[1] == x & ccell[2] == y:
+    #             targetcell = ccell[0]
+    #             return targetcell.state
+    #     # no cell found, should not happen
+    #     return False
+
+    # def step(self):
+    #     """ take one time step
+
+    #     set one time step, every cell checks its neighbors and defines the expected state. When the swing gate is open
+    #     the new states are set according to the expected state.
+
+    #     """
+    #     # plus one day
+    #     self.day += 1
+
+    #     # every cell is given its direct neighbors
+    #     self.assign_neighbor_ids()
+    #     # let every cell check it's neighbors, and prepare the next state
+    #     # (otherwise future states may already influence
+    #     for cell_to_update in self.cell_list:
+    #         cell_to_update.evaluate_a_day()
+    #     # open the swing gate en update all states
+    #     for cell_to_update in self.cell_list:
+    #         new_state_row = cell_to_update.compartment_table[-1]
+    #         for i in range(len(cell_to_update.model_type)):
+    #             if new_state_row[i]:
+    #                 cell_to_update.compartment = cell_to_update.model_type[i]
+    #     # TODO: check neighbor requirements i.e. when is an 'adjacent' cell taken into account?
+    #     #
+    #     # for now check if there are cells around the cell of interest and retrieve their state
+    #     # default case: a cell has 8 neighbours
+
 
 if __name__ == "__main__":
     myGrid = Grid(9, 9)
-    myGrid.infect(4, 4)
-    for i in range(20):
-        myGrid.step()
-        
+    # state = myGrid.state(1, 1)
+    # print("state van 1, 1, is: " + state)
+    myGrid.step()
+
+    air = 'lucht'
     print("klaar")
