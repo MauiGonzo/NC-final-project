@@ -15,7 +15,7 @@ class Grid:
     cell_list: List[List[cell.Cell]] = []
     id_list: List[int] = []
 
-    def __init__(self, width, height, radius):
+    def __init__(self, width, height, radius=1):
         """
         The __init__ method initializes the grid object
 
@@ -68,6 +68,7 @@ class Grid:
         state = self.cell_list[x][y].compartment
         # If state is recovered, no further computing is needed
         if state == 'R':
+            self.cell_list[x][y].compartment_table.append()
             return 'R'
         # Set initial counts to 0
         neighbor_states = {'S': 0, 'I': 0, 'R': 0}
@@ -91,7 +92,7 @@ class Grid:
         for col in range(self.width):
             for row in range(self.height):
                 temp[col][row].compartment = self.evaluate_cell(col, row, radius=self.radius)
-                # TODO: update cells state history
+                temp[col][row].add_compartment_day(temp[col][row].compartment)
         self.cell_list = temp
 
     def infect(self, x, y):
@@ -112,7 +113,10 @@ if __name__ == "__main__":
     myGrid = Grid(9, 9)
     # state = myGrid.state(1, 1)
     # print("state van 1, 1, is: " + state)
+    myGrid.infect(4, 4)
     myGrid.step()
+    for i in range(20):
+        myGrid.step()
 
     air = 'lucht'
     print("klaar")
