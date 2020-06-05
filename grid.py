@@ -1,4 +1,5 @@
 import copy
+import math
 import random
 import numpy as np
 import pandas as pd
@@ -16,7 +17,7 @@ class Grid:
     cell_list: List[List[cell.Cell]] = []
     id_list: List[int] = []
 
-    def __init__(self, width, height, radius=1, model_type='SIR'):
+    def __init__(self, width, height, neighbours='radius', **kwargs):
         """
         The __init__ method initializes the grid object
 
@@ -24,13 +25,28 @@ class Grid:
             width (int): number of cells the grid measures as width
             height (int): number of cells the grid measures as height
             day (int): the number of days the model is running
+
+        Keyword arguments:
+            neighbours (str):   which method to use when selecting methods
+                                valid options are: radius, random, gauss, all and gradient
+            radius (int):       radius of cells that are considered a neighbour
+                                used when neighbours are selected based on radius
+            nr_of_neighbours(int): number of neighbours that are considered in step
+                                used when neighbours are selected randomly
+            SD (int):           standard deviation of the gaussian
+                                used when neighoubrs are selected randomly using a gaussian
         """
         self.day = 0
         self.width = width
         self.height = height
-        self.radius = radius
-        self.model_type = model_type
-        self.agg_compartments = [[0] * len(model_type)]
+        self.neighbours = neighbours
+
+        self.radius = kwargs.get('radius', 1)
+        self.nr_of_neighbours = kwargs.get('nr_of_neighbours', 8)
+        self.SD = kwargs.get('SD', self.width)
+
+        self.model_type = kwargs.get('model_type', 1)
+        self.agg_compartments = [[0] * len(self.model_type)]
         # TODO: rewrite the transition from I -> R
         self.infection_phase_threshold = 7
 
@@ -42,19 +58,21 @@ class Grid:
         for col in range(width):
             for row in range(height):
                 self.cell_list[col].append(cell.Cell(col, row, self))
-                # self.id_list.append(id(self.cell_list[-1]))
 
-                # self.cell_list.append([cell.Cell(wi, hi, self), wi, hi])
-        # set the initial number of S for day 0, which is the number of cells
         self.agg_compartments[0][0] = width * height
 
-    def randomize_cell_list(self):
-        # TODO: make function
-        # shuffle cell_list, so the instances are shuffeled
-        # reassign all the x, y locations
-        pass
+    def get_neighbours(self, x, y):
+        """ Returns a list of coordinates of cells neighbouring the cell at x, y. """
+        if self.neighbours == 'radius':
+            return self._get_neighbours_in_radius(x, y, self.radius)
+        if self.neighbours == 'random':
+            return self._get_neighbours_randomly(x, y, self.nr_of_neighbours)
+        if self.neighbours == 'gauss':
+            return self._get_neighbours_gaussian(x, y, self.nr_of_neighbours, self.SD)
+        if self.neighbours == 'all':
+            return self._get_neighbours_all(x, y)
 
-    def get_neighbours(self, x, y, radius=1):
+    def _get_neighbours_in_radius(self, x, y, radius):
         """ Returns a list of coordinates of cells neighbouring the cell at x, y. """
         neigh = []
         for col in range(x - radius, x + radius + 1):
@@ -67,18 +85,62 @@ class Grid:
                 neigh.append((col % self.width, row % self.height))
         return neigh
 
-    def evaluate_cell(self, x, y, radius=1):
+    def _get_neighbours_randomly(self, x, y, nr_of_neighbours):
+        """ Returns a list of randomly sampled neighbours where each cell has an equal chance of being sampled. """
+        neigh = []
+        while len(neigh) < nr_of_neighbours:
+            col = random.randint(0, self.width-1)
+            row = random.randint(0, self.height-1)
+            if (col, row) == (x, y) or (col, row) in neigh:
+                continue
+            else:
+                neigh.append((col, row))
+        return neigh
+
+    def _get_neighbours_gaussian(self, x, y, nr_of_neighbours, SD=2):
+        """ Returns a list of randomly sampled neighbours where cells closer to x,y have a higher chance of being sampled. """
+        neigh = []
+        while len(neigh) < nr_of_neighbours:
+            col = (x + int(random.gauss(0, SD))) % (self.width)
+            row = (y + int(random.gauss(0, SD))) % (self.height)
+            if (col, row) == (x, y) or (col, row) in neigh:
+                continue
+            else:
+                neigh.append((col, row))
+        return neigh
+
+    def get_dist(self, a, b):
+        """ Computes the distance between point a and point b. """
+        a = np.array(a)
+        b = np.array(b)
+        dist = np.linalg.norm(a-b)
+        return dist
+
+    def evaluate_cell(self, x, y):
         """ Evaluates the state of cell at x, y based on it's neighbours. """
         # Get current state
         state = self.cell_list[x][y].compartment
         # If state is recovered, no further computing is needed
         if state == 'R':
+            # TODO: check if this append is required
+            self.cell_list[x][y].compartment_table.append(state)
             return 'R'
         # Set initial counts to 0
         neighbor_states = {'S': 0, 'I': 0, 'R': 0}
         # Count states of neighbours
-        for x, y in self.get_neighbours(x, y, radius=radius):
-            neighbor_states[self.cell_list[x][y].compartment] += 1
+        if self.neighbours == 'all':
+            for c in range(self.width):
+                for r in range(self.height):
+                    if (c, r) != (x, y):
+                        neighbor_states[self.cell_list[c][r].compartment] += 1
+        if self.neighbours == 'gradient':
+            for c in range(self.width):
+                for r in range(self.height):
+                    if (c, r) != (x, y):
+                        neighbor_states[self.cell_list[c][r].compartment] += math.log10(1-(1/self.get_dist((c, r), (x, y)))+1e-9)
+        else:
+            for x, y in self.get_neighbours(x, y):
+                neighbor_states[self.cell_list[x][y].compartment] += 1
         # Get random number
         chance = random.random()
         # Return evaluated state
@@ -108,7 +170,6 @@ class Grid:
                     if temp[col][row].compartment == 'R':
                         new_agg_day[2] += 1
         self.cell_list = temp
-        self.agg_compartments.append(new_agg_day)
 
     def infect(self, x, y):
         """ Sets state of cell at x, y to I=infected. """
@@ -122,17 +183,6 @@ class Grid:
             for row in range(self.height):
                 states[col].append(classes.index(self.cell_list[col][row].compartment))
         return states
-
-    # def get_statistics(self):
-    #     ''' Get the number of recovered cells '''
-    #     susceptible = 0
-    #     recovered = 0
-    #     days_past = len(self.cell_list[0][0].compartment_table)
-    #     for col in range(self.width):
-    #         for row in range(self.height):
-    #             if (self.cell_list[col][row].compartment_table[-1][-1]):
-    #                 recovered += 1
-    #     return recovered, days_past
 
 
 if __name__ == "__main__":
