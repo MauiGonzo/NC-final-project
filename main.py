@@ -15,14 +15,15 @@ import matplotlib.pyplot as plt
 
 class SIRGui:
 
-    FRAME_RATE = 1000           # Miliseconds per frame
+    FRAME_RATE = 1000 // 5          # Miliseconds per frame
     state_counts = []
 
-    def __init__(self, rows, cols, mode='auto'):
+    def __init__(self, rows, cols, mode='auto', **kwargs):
         """ Constructs a window in which visualisation will take place. """
         # Store rows and cols
         self.rows = rows
         self.cols = cols
+        self.kwargs = kwargs
 
         # Create window
         self.window = Tk()
@@ -44,7 +45,7 @@ class SIRGui:
 
     def start(self):
         """ This method is run once before the simulation starts. """
-        self.SIR = Grid(self.cols, self.rows, radius=1)
+        self.SIR = Grid(self.cols, self.rows, **self.kwargs)
         self.SIR.infect(25, 25)
         self.store_state()
         data = pd.DataFrame(self.SIR.get_states())
@@ -79,6 +80,7 @@ class SIRGui:
 
     def auto_exit(self):
         """ Exits the application without the need of an event and shows a plot of the simulation. """
+        # self.window.quit()
         self.window.destroy()
         self.plot_states()
 
@@ -104,12 +106,24 @@ class SIRGui:
         I = [i[1] for i in self.state_counts]
         R = [i[2] for i in self.state_counts]
         X = list(range(1, len(S) + 1))
+        fig = plt.figure(figsize=(12, 5))
+        plt.subplot(1, 2, 1)
         plt.plot(X, S, label='Susceptible')
         plt.plot(X, I, label='Infected')
         plt.plot(X, R, label='Recovered')
         plt.legend()
-        plt.show()
+        plt.subplot(1, 2, 2)
+        plt.stackplot(X, R, I, S, labels=['Recovered', 'Infected', 'Susceptible'], colors=['#2ca02c', '#ff7f0e', '#1f77b4', '#d62728'])
+        handles, labels = plt.gca().get_legend_handles_labels()
+        order = [2, 1, 0]
+        plt.legend([handles[idx] for idx in order], [labels[idx] for idx in order], loc='center right')
+        fig.show()
 
 
 if __name__ == "__main__":
-    SIRGui(51, 51, 'auto')
+    # SIRGui(51, 51, 'auto', neighbours='all')
+    # SIRGui(51, 51, 'auto', neighbours='radius', radius=1)
+    # SIRGui(51, 51, 'auto', neighbours='random', nr_of_neighbours=5)
+    # SIRGui(51, 51, 'auto', neighbours='gauss', nr_of_neighbours=8, SD=0.9)
+    SIRGui(51, 51, 'auto', neighbours='gradient')
+
