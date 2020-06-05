@@ -1,7 +1,7 @@
 #Ideas for experiments
 
 In general finding out wat is means to evaluate the same model with Cellular Automatons
-Possibly we need to do multiple runs te derive a distribution
+Possibly we need to do multiple runs to derive a distribution
 
 In general investigate:
 * scalability on log scale, keep the field sqaure in order to maintain same characteristics 

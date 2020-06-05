@@ -115,8 +115,9 @@ class Grid:
         """ Evaluates the state of cell at x, y based on it's neighbours. """
         # Get current state
         state = self.cell_list[x][y].compartment
-        # If state is recoverd, no further computing is needed
+        # If state is recovered, no further computing is needed
         if state == 'R':
+            self.cell_list[x][y].compartment_table.append(state)
             return 'R'
         # Set initial counts to 0
         neighbor_states = {'S': 0, 'I': 0, 'R': 0}
@@ -151,11 +152,11 @@ class Grid:
         for col in range(self.width):
             for row in range(self.height):
                 temp[col][row].compartment = self.evaluate_cell(col, row)
-                # TODO: update cells state history
+                temp[col][row].add_compartment_day(temp[col][row].compartment)
         self.cell_list = temp
 
     def infect(self, x, y):
-        """ Sets state of cell at x, y to infected. """
+        """ Sets state of cell at x, y to I=infected. """
         self.cell_list[x][y].compartment = 'I'
 
     def get_states(self):
@@ -167,7 +168,11 @@ class Grid:
                 states[col].append(classes.index(self.cell_list[col][row].compartment))
         return states
 
+
 if __name__ == "__main__":
     myGrid = Grid(9, 9)
-    myGrid.step()
+    myGrid.infect(4, 4)
+    for i in range(20):
+        myGrid.step()
+        
     print("klaar")

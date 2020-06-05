@@ -41,7 +41,18 @@ class Cell:
         self.evaluate_a_day()
         # step one day forward
 
+    def add_compartment_day(self, compartment):
+        # TODO: extend for SEIR and SEIR-D
+        if compartment == 'R':
+            self.compartment_table.append([0, 0, 1])
+        elif compartment == 'I':
+            self.compartment_table.append([0, 1, 0])
+        elif compartment == 'S':
+            self.compartment_table.append([1, 0, 0])
+
+
     def evaluate_a_day(self):
+        # TODO: probably obsolete
         """let the cell live a day and see what it becomes
 
         append the new state in the state_table
