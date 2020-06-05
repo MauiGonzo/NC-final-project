@@ -22,18 +22,18 @@ class Cell:
     lower_id = 0
 
     #     TODO: make a state list, days vs SIR-states
-    def __init__(self, x, y, grid, state='S', type='SIR'):
+    def __init__(self, x, y, grid, state='S', model_type='SIR'):
         self.x = x
         self.y = y
         self.grid = grid
         self.compartment = state
-        self.model_type = type
-        self.compartment_table = [[0]*len(type)]
+        self.model_type = model_type
+        self.compartment_table = [[0] * len(model_type)]
         # self.compartment_table = np.zeros([len(type), 1])
         # self.compartment_table = self.compartment_table.astype(int)
         # do the inital step
         # find out which position has state in type, that is the location that needs an update in state_table
-        self.compartment_table[0][type.index(state)] = 1
+        self.compartment_table[0][model_type.index(state)] = 1
 
     def step(self):
         """ do one time step"""
