@@ -1,7 +1,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
 
-def SIR(N, R_0, infectious, I_0, t, model='SIR', incubation=5.2, alpha = 0.05, death = 6):
+def SIR(N, R_0, infectious, I_0, t, model='SIR', incubation=5.2, alpha = 0.05, death = 6, plot_results=False):
 
     check1 = False
     check2 = False
@@ -58,8 +58,9 @@ def SIR(N, R_0, infectious, I_0, t, model='SIR', incubation=5.2, alpha = 0.05, d
     R_array = [R]
     D_array = [D]
 
-    for j in range(t):
-
+    done = False
+    j = 0
+    while not done and j < t:
         s = deltaS()
         e = deltaE()
         i = deltaI()
@@ -72,23 +73,33 @@ def SIR(N, R_0, infectious, I_0, t, model='SIR', incubation=5.2, alpha = 0.05, d
         R += r
         D += d
 
+        j += 1
+
         S_array.append(S)
         E_array.append(E)
         I_array.append(I)
         R_array.append(R)
         D_array.append(D)
+        
+        if I < 0.5:
+            done = True
+        
+
 
     X = np.arange(len(S_array))
-
-    plt.plot(X, S_array, label='Susceptible')
-    if check1:
-        plt.plot(X, E_array, label='Exposed')
-    plt.plot(X, I_array, label='Infected')
-    plt.plot(X, R_array, label='Recovered')
-    if check2:
-        plt.plot(X, D_array, label='Deceased')
-    plt.legend()
-    plt.show()
+    
+    if plot_results:
+        plt.plot(X, S_array, label='Susceptible')
+        if check1:
+            plt.plot(X, E_array, label='Exposed')
+        plt.plot(X, I_array, label='Infected')
+        plt.plot(X, R_array, label='Recovered')
+        if check2:
+            plt.plot(X, D_array, label='Deceased')
+        plt.legend()
+        plt.show()
+    
+    return {'S': S_array, 'I': I_array, 'E': E_array, 'R': R_array, 'D': D_array}
 
 if __name__ == "__main__":
-    SIR(51*51, 2.2, 2.9, 1, 150, 'SIR')
+    SIR(51*51, 2.2, 2.9, 1, 150, 'SIR', plot_results=True)

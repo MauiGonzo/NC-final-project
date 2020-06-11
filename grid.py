@@ -46,7 +46,7 @@ class Grid:
         self.SD = kwargs.get('SD', self.width)
 
         self.model_type = kwargs.get('model_type', 1)
-        self.agg_compartments = [[0] * len(self.model_type)]
+        # self.agg_compartments = [[0] * len(self.model_type)]
         # TODO: rewrite the transition from I -> R
         self.infection_phase_threshold = 7
 
@@ -59,7 +59,9 @@ class Grid:
             for row in range(height):
                 self.cell_list[col].append(cell.Cell(col, row, self))
 
-        self.agg_compartments[0][0] = width * height
+        # self.agg_compartments[0][0] = width * height
+
+        self.has_infected = False
 
     def get_neighbours(self, x, y):
         """ Returns a list of coordinates of cells neighbouring the cell at x, y. """
@@ -69,8 +71,6 @@ class Grid:
             return self._get_neighbours_randomly(x, y, self.nr_of_neighbours)
         if self.neighbours == 'gauss':
             return self._get_neighbours_gaussian(x, y, self.nr_of_neighbours, self.SD)
-        if self.neighbours == 'all':
-            return self._get_neighbours_all(x, y)
 
     def _get_neighbours_in_radius(self, x, y, radius):
         """ Returns a list of coordinates of cells neighbouring the cell at x, y. """
@@ -133,7 +133,7 @@ class Grid:
                 for r in range(self.height):
                     if (c, r) != (x, y):
                         neighbor_states[self.cell_list[c][r].compartment] += 1
-        if self.neighbours == 'gradient':
+        elif self.neighbours == 'gradient':
             for c in range(self.width):
                 for r in range(self.height):
                     if (c, r) != (x, y):
@@ -145,20 +145,28 @@ class Grid:
         chance = random.random()
         # Return evaluated state
         if state == 'S' and chance < 1 - (1 - self.beta) ** neighbor_states['I']:
+            # Make sure there is at least one infection
+            if not self.has_infected:
+                self.has_infected = True
             return 'I'
-        elif state == 'I' and chance < 1 / self.infection_phase_threshold:
+        elif state == 'I' and chance < 1 / self.infection_phase_threshold and self.has_infected:
             return 'R'
         else:
             return state
 
     def step(self):
         """ Steps one day ahead. Evaluates the state of all cells in the grid. """
+        # Boolean to indicate no more infected cells
+        done = True
         # Copy grid so updating of cells doesn't affect neighbor states
         temp = copy.deepcopy(self.cell_list)
-        new_agg_day = [0] * len(self.model_type)
+        # new_agg_day = [0] * len(self.model_type)
         for col in range(self.width):
             for row in range(self.height):
-                temp[col][row].compartment = self.evaluate_cell(col, row, radius=self.radius)
+                new_state = self.evaluate_cell(col, row)
+                if new_state == 'I':
+                    done = False
+                temp[col][row].compartment = new_state
                 temp[col][row].add_compartment_day(temp[col][row].compartment)
                 # evaluate the new aggregated states
                 # TODO: je kan dit waarschijnlijk ook doen met een index functie, voor alle modellen zonder veel if's
@@ -170,6 +178,7 @@ class Grid:
                     if temp[col][row].compartment == 'R':
                         new_agg_day[2] += 1
         self.cell_list = temp
+        return done
 
     def infect(self, x, y):
         """ Sets state of cell at x, y to I=infected. """
@@ -184,6 +193,34 @@ class Grid:
                 states[col].append(classes.index(self.cell_list[col][row].compartment))
         return states
 
+    def count_states(self, model="SIR"):
+        """ Returns a dict with a count of each state. """
+        states = {k: 0 for k in model}
+        for col in range(self.width):
+            for row in range(self.height):
+                states[self.cell_list[col][row].compartment] += 1
+        return states
+
+    def run(self, model="SIR"):
+        """ Runs simulation until no more cells are infected. """
+        # Construct dict to store state history in.
+        history = {k: [] for k in model}
+        # Step through until pandemic is over.
+        done = False
+        while not done:
+            # Record state
+            history = {k: history[k] + [v] for k, v in self.count_states(model).items()}
+            # Go to next step
+            done = self.step()
+        # Return history
+        return history
+    
+    @classmethod
+    def simulate(cls, *args, **kwargs):
+        """ Runs a full simulation. """
+        grid = cls(*args, **kwargs)
+        grid.infect(random.randint(0, grid.width-1), random.randint(0, grid.height-1))
+        return grid.run()
 
 if __name__ == "__main__":
     myGrid = Grid(9, 9)
