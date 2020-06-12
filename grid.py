@@ -15,7 +15,7 @@ class Grid:
     cell_list: List[List[cell.Cell]] = []
     id_list: List[int] = []
 
-    def __init__(self, width, height, radius):
+    def __init__(self, width, height, radius, model='SIR'):
         """
         The __init__ method initializes the grid object
 
@@ -28,8 +28,10 @@ class Grid:
         self.width = width
         self.height = height
         self.radius = radius
+        self.model = model
         # TODO: rewrite the transition from I -> R
         self.infection_phase_threshold = 2.2
+        self.exposed_phase_threshold = 5.2
 
         # TODO: rewrite, is this correct?
         self.beta = 0.76
@@ -116,27 +118,39 @@ class Grid:
 
         state = self.cell_list[x][y].compartment
 
-        if random.random() < 1 / self.infection_phase_threshold:
-            transition = True
-        else:
-            transition = False
+        if state == "I":
+            if random.random() < 1 / self.infection_phase_threshold:
+                transition = True
+            else:
+                transition = False
 
-        infect_count = 0
+            if 1 <= self.beta:
+                infect_count = np.floor(self.beta)
+            else:
+                infect_count = 0
 
-        while random.random() < self.beta:
-            infect_count += 1
+            if random.random() < self.beta % 1:
+                infect_count += 1
 
-        neighbourlist = []
-        for x, y in self.get_neighbours(x, y, radius=radius):
-            if self.cell_list[x][y].compartment == 'S':
-                neighbourlist.append((x, y))
+            neighbourlist = []
+            for x, y in self.get_neighbours(x, y, radius=radius):
+                if self.cell_list[x][y].compartment == 'S':
+                    neighbourlist.append((x, y))
 
-        if not neighbourlist:
+            if not neighbourlist:
+                return transition, []
+            elif len(neighbourlist) > infect_count:
+                for _ in range(len(neighbourlist) - infect_count):
+                    neighbourlist.remove(random.choice(neighbourlist))
+            return transition, neighbourlist
+
+        elif state == "E":
+            if random.random() < 1 / self.exposed_phase_threshold:
+                transition = True
+            else:
+                transition = False
             return transition, []
-        elif len(neighbourlist) > infect_count:
-            for _ in range(len(neighbourlist) - infect_count):
-                neighbourlist.remove(random.choice(neighbourlist))
-        return transition, neighbourlist
+
 
     def step(self):
         temp = copy.deepcopy(self.cell_list)
@@ -148,8 +162,14 @@ class Grid:
                         temp[col][row].compartment = 'R'
                     if neighbours:
                         for (nc, nr) in neighbours:
-                            if temp[nc][nr].compartment == 'S':
+                            if temp[nc][nr].compartment == 'S' and self.model == 'SIR':
                                 temp[nc][nr].compartment = 'I'
+                            elif temp[nc][nr].compartment == 'S' and self.model == 'SEIR':
+                                temp[nc][nr].compartment = 'E'
+                elif self.cell_list[col][row].compartment == 'E':
+                    transition, _ = self.cell_behaviour(col, row)
+                    if transition:
+                        temp[col][row].compartment = 'I'
         self.cell_list = temp
 
 
@@ -172,9 +192,13 @@ class Grid:
         """ Sets state of cell at x, y to recovered. """
         self.cell_list[x][y].compartment = 'R'
 
+    def expose(self, x, y):
+        """ Sets state of cell at x, y to exposed. """
+        self.cell_list[x][y].compartment = 'E'
+
     def get_states(self):
         """ Returns a grid of state indicators. """
-        classes = ['S', 'I', 'R']
+        classes = ['S', 'I', 'R', 'E']
         states = [[] for _ in range(self.width)]
         for col in range(self.width):
             for row in range(self.height):
@@ -229,4 +253,3 @@ if __name__ == "__main__":
     myGrid.step()
 
     air = 'lucht'
-    print("klaar")
