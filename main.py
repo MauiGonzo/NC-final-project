@@ -89,28 +89,33 @@ class SIRGui:
 
     def store_state(self):
         """ Records the number of people in all states"""
-        a = np.zeros(3)
+        a = np.zeros(4)
         for i in self.SIR.cell_list:
             for j in i:
                 if j.compartment == 'S':
                     a[0] += 1
                 elif j.compartment == 'I':
                     a[1] += 1
-                else:
+                elif j.compartment == 'R':
                     a[2] += 1
+                else:
+                    a[3] += 1
         self.state_counts.append(a)
 
     def plot_states(self):
         S = [i[0] for i in self.state_counts]
         I = [i[1] for i in self.state_counts]
         R = [i[2] for i in self.state_counts]
+        E = [i[3] for i in self.state_counts]
         X = list(range(1, len(S) + 1))
         plt.plot(X, S, label='Susceptible')
         plt.plot(X, I, label='Infected')
         plt.plot(X, R, label='Recovered')
+        if self.model == "SEIR":
+            plt.plot(X, E, label='Exposed')
         plt.legend()
         plt.show()
 
     
 if __name__ == "__main__":
-    SIRGui(51, 51, 'auto', model='SEIR')
+    SIRGui(51, 51, 'auto', model='SIR')
