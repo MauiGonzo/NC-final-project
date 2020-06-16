@@ -34,7 +34,10 @@ class SIRGui:
         self.window.configure(background='#3d3d3d')
 
         # Add canvas
-        self.cvs = CellViz(self.window, cols, rows, 720, colors=['gray', 'red', 'green'], outline='gray')
+        if self.model == "SIR":
+            self.cvs = CellViz(self.window, cols, rows, 720, colors=['gray', 'red', 'green'], outline='gray')
+        else:
+            self.cvs = CellViz(self.window, cols, rows, 720, colors=['gray', 'red', 'green', 'yellow'], outline='gray')
         self.cvs.grid(column=0, row=0)
 
         # Show window
@@ -85,7 +88,7 @@ class SIRGui:
 
     def find_infected(self):
         """ Determines whether any infected people are left"""
-        return bool(self.state_counts[-1][1])
+        return bool(self.state_counts[-1][1] + self.state_counts[-1][3])
 
     def store_state(self):
         """ Records the number of people in all states"""
@@ -108,14 +111,14 @@ class SIRGui:
         R = [i[2] for i in self.state_counts]
         E = [i[3] for i in self.state_counts]
         X = list(range(1, len(S) + 1))
-        plt.plot(X, S, label='Susceptible')
-        plt.plot(X, I, label='Infected')
-        plt.plot(X, R, label='Recovered')
+        plt.plot(X, S, label='Susceptible', color='gray')
+        plt.plot(X, I, label='Infected', color='red')
+        plt.plot(X, R, label='Recovered', color='green')
         if self.model == "SEIR":
-            plt.plot(X, E, label='Exposed')
+            plt.plot(X, E, label='Exposed', color='yellow')
         plt.legend()
         plt.show()
 
     
 if __name__ == "__main__":
-    SIRGui(51, 51, 'auto', model='SIR')
+    SIRGui(51, 51, 'auto', model='SEIR')
