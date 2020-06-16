@@ -121,9 +121,9 @@ class SIRGui:
 
 
 if __name__ == "__main__":
-    # SIRGui(51, 51, 'auto', neighbours='all')
+    SIRGui(51, 51, 'auto', neighbours='all')
     # SIRGui(51, 51, 'auto', neighbours='radius', radius=1)
     # SIRGui(51, 51, 'auto', neighbours='random', nr_of_neighbours=5)
-    SIRGui(51, 51, 'auto', neighbours='gauss', nr_of_neighbours=8, SD=0.9)
+    # SIRGui(51, 51, 'auto', neighbours='gauss', nr_of_neighbours=8, SD=0.9)
     # SIRGui(51, 51, 'auto', neighbours='gradient')
 

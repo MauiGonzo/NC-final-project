@@ -15,10 +15,13 @@ def SIR(N, R_0, infectious, I_0, t, model='SIR', incubation=5.2, alpha = 0.05, d
         print("ERROR!, choose valid model (SIR, SEIR, or SEIRD)")
         return()
 
-    gamma = 1/infectious
-    beta = R_0 * gamma
-    delta = 1/incubation
-    rho = 1/death
+    if isinstance(infectious, int):
+        gamma = 1/infectious        # Recovery rate. People recover after gamma days on average.
+    else:
+        gamma = infectious
+    beta = R_0 * gamma          # Infection rate. Contacts * probability of transmission per contact.
+    delta = 1/incubation        # Resubsceptibility rate. People lose resistance after delta days on average. ???
+    rho = 1/death               # Mortality rate. Probability a person dies from the disease.
 
     S = N - I_0
     E = 0

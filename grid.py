@@ -17,16 +17,45 @@ class Grid:
     cell_list: List[List[cell.Cell]] = []
     id_list: List[int] = []
 
-    def __init__(self, width, height, neighbours='radius', **kwargs):
+    def __init__(self,
+                 width,
+                 height,
+                 R_0 = 0,
+                 gamma = 0.053,
+                 recovered = 0,
+                 beta = 0.152,
+                 infected = 1,
+                 rho = 0.0,
+                 dead = 0,
+                 delta = 0.0,
+                 neighbours='radius',
+                 **kwargs):
         """
         The __init__ method initializes the grid object
 
         Attributes:
-            width (int): number of cells the grid measures as width
-            height (int): number of cells the grid measures as height
-            day (int): the number of days the model is running
+            width (int):        number of cells the grid measures as width
+            height (int):       number of cells the grid measures as height
 
         Keyword arguments:
+            R_0 (float):        basic reproduction number.
+                                Default is 0
+            gamma (float):      recovery rate, probability of recovering from the disease.
+                                Default is 0.053
+            recovered (int):    number of recovered people at the start of the simulation.
+                                Default is 0
+            beta (float):       infection rate, contacts * probability of transferring the disease.
+                                Default is 0.152
+            infected (int):     number of infected people at the start of the simulation.
+                                Default is 1
+            rho (float):        mortality rate, probability of dying from the disease.
+                                Default is 0
+            dead (int):         number of dead people at the start of the simulation.
+                                Default is 0
+            delta (float):      resusceptibility rate, probability of losing resistance.
+                                Default is 0.0
+            day (int):          the number of days the model is running
+                                Default is 0
             neighbours (str):   which method to use when selecting methods
                                 valid options are: radius, random, gauss, all and gradient
             radius (int):       radius of cells that are considered a neighbour
@@ -36,22 +65,37 @@ class Grid:
             SD (int):           standard deviation of the gaussian
                                 used when neighoubrs are selected randomly using a gaussian
         """
-        self.day = 0
         self.width = width
         self.height = height
-        self.neighbours = neighbours
+        self.R_0 = R_0
+        self.gamma = gamma
+        self.recovered = recovered
+        self.beta = beta
+        self.infected = infected
+        self.rho = rho
+        self.dead = dead
+        self.delta = delta
+        self.day = 0
 
+        # Set update method
+        self.neighbours = neighbours
         self.radius = kwargs.get('radius', 1)
+
+        # Determine the number of contacts for every timestep
         self.nr_of_neighbours = kwargs.get('nr_of_neighbours', 8)
+        if self.neighbours == 'all':
+            self.nr_of_neighbours = width * height - 1
+        elif self.neighbours == 'radius':
+            self.nr_of_neighbours = ((self.radius * 2 + 1) ** 2) - 1
         self.SD = kwargs.get('SD', self.width)
 
-        self.model_type = kwargs.get('model_type', 1)
-        # self.agg_compartments = [[0] * len(self.model_type)]
-        # TODO: rewrite the transition from I -> R
-        self.infection_phase_threshold = 7
+        # Compute relevant infection probability
+        self.p_infect = self.beta / self.nr_of_neighbours
 
-        # TODO: rewrite, is this correct?
-        self.beta = 0.1
+        self.model_type = kwargs.get('model_type', 'SIR')
+        # # self.agg_compartments = [[0] * len(self.model_type)]
+        # # TODO: rewrite the transition from I -> R
+        # self.infection_phase_threshold = 7
 
         # create list of Cells, with x and y coordinates
         self.cell_list = [[] for _ in range(self.width)]
@@ -133,23 +177,23 @@ class Grid:
                 for r in range(self.height):
                     if (c, r) != (x, y):
                         neighbor_states[self.cell_list[c][r].compartment] += 1
-        elif self.neighbours == 'gradient':
-            for c in range(self.width):
-                for r in range(self.height):
-                    if (c, r) != (x, y):
-                        neighbor_states[self.cell_list[c][r].compartment] += math.log10(1-(1/self.get_dist((c, r), (x, y)))+1e-9)
+        # elif self.neighbours == 'gradient':
+        #     for c in range(self.width):
+        #         for r in range(self.height):
+        #             if (c, r) != (x, y):
+        #                 neighbor_states[self.cell_list[c][r].compartment] += math.log10(1-(1/self.get_dist((c, r), (x, y)))+1e-9)
         else:
             for x, y in self.get_neighbours(x, y):
                 neighbor_states[self.cell_list[x][y].compartment] += 1
         # Get random number
         chance = random.random()
         # Return evaluated state
-        if state == 'S' and chance < 1 - (1 - self.beta) ** neighbor_states['I']:
+        if state == 'S' and chance < self.p_infect * neighbor_states['I']:
             # Make sure there is at least one infection
             if not self.has_infected:
                 self.has_infected = True
             return 'I'
-        elif state == 'I' and chance < 1 / self.infection_phase_threshold and self.has_infected:
+        elif state == 'I' and chance < self.gamma and self.has_infected:
             return 'R'
         else:
             return state
@@ -170,19 +214,23 @@ class Grid:
                 temp[col][row].add_compartment_day(temp[col][row].compartment)
                 # evaluate the new aggregated states
                 # TODO: je kan dit waarschijnlijk ook doen met een index functie, voor alle modellen zonder veel if's
-                if self.model_type == 'SIR':
-                    if temp[col][row].compartment == 'S':
-                        new_agg_day[0] += 1
-                    if temp[col][row].compartment == 'I':
-                        new_agg_day[1] += 1
-                    if temp[col][row].compartment == 'R':
-                        new_agg_day[2] += 1
+                # if self.model_type == 'SIR':
+                #     if temp[col][row].compartment == 'S':
+                #         new_agg_day[0] += 1
+                #     if temp[col][row].compartment == 'I':
+                #         new_agg_day[1] += 1
+                #     if temp[col][row].compartment == 'R':
+                #         new_agg_day[2] += 1
         self.cell_list = temp
         return done
 
     def infect(self, x, y):
         """ Sets state of cell at x, y to I=infected. """
         self.cell_list[x][y].compartment = 'I'
+
+    def kill(self, x, y):
+        """ Sets state of cell at x, y to D=dead. """
+        self.cell_list[x][y].compartment = 'D'
 
     def get_states(self):
         """ Returns a grid of state indicators. """
@@ -201,7 +249,7 @@ class Grid:
                 states[self.cell_list[col][row].compartment] += 1
         return states
 
-    def run(self, model="SIR"):
+    def run(self, verbose=False, model="SIR"):
         """ Runs simulation until no more cells are infected. """
         # Construct dict to store state history in.
         history = {k: [] for k in model}
@@ -212,15 +260,34 @@ class Grid:
             history = {k: history[k] + [v] for k, v in self.count_states(model).items()}
             # Go to next step
             done = self.step()
+            # Update state if verbose
+            if verbose:
+                print(f"[Timestep {len(history['S'])-1:3d}] " + "".join([f"{k}: {v[-1]:3d} " for k, v in history.items()]), end="\r")
         # Return history
         return history
-    
+
     @classmethod
-    def simulate(cls, *args, **kwargs):
+    def simulate(cls, *args, verbose=False, **kwargs):
         """ Runs a full simulation. """
         grid = cls(*args, **kwargs)
-        grid.infect(random.randint(0, grid.width-1), random.randint(0, grid.height-1))
-        return grid.run()
+        modified = []
+        # Randomly infect
+        infected = 0
+        while infected < grid.infected:
+            x, y = random.randint(0, grid.width-1), random.randint(0, grid.height-1)
+            if (x, y) not in modified:
+                grid.infect(x, y)
+                modified.append((x, y))
+                infected += 1
+        # Randomly kill
+        dead = 0
+        while dead < grid.dead:
+            x, y = random.randint(0, grid.width-1), random.randint(0, grid.height-1)
+            if (x, y) not in modified:
+                grid.kill(x, y)
+                modified.append((x, y))
+                dead += 1
+        return grid.run(verbose)
 
 if __name__ == "__main__":
     myGrid = Grid(9, 9)
