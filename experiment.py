@@ -32,10 +32,11 @@ class Experiment:
         """
         self.size = size
         self.N = kwargs.get('N', 10)
-        self.neighbours = kwargs.get('neighbours', 'all')
         self.beta = beta
         self.gamma = gamma
         self.infected = infected
+        self.neighbours = kwargs.get('neighbours', 'all')
+        kwargs['neighbours'] = self.neighbours
 
     def run(self):
         """ Runs the experiment. """
@@ -49,7 +50,7 @@ class Experiment:
             results['Sim'] = i
             MA_stats.append(results)
             # Run cellular model and store results
-            results = Grid.simulate(self.size[0], self.size[1], self.neighbours, verbose=True, beta=self.beta, gamma=self.gamma, infected=self.infected)
+            results = Grid.simulate(self.size[0], self.size[1], verbose=True, beta=self.beta, gamma=self.gamma, infected=self.infected, **kwargs)
             results = pd.DataFrame.from_dict(results)
             results['Timestep'] = results.index
             results['Sim'] = i
@@ -58,8 +59,8 @@ class Experiment:
         MA_stats = pd.concat(MA_stats).sort_values(by=['Timestep'])
         CA_stats = pd.concat(CA_stats).sort_values(by=['Timestep'])
         # Bin results
-        MA_stats['Bin'] = MA_stats['Timestep'] // 5
-        CA_stats['Bin'] = CA_stats['Timestep'] // 5
+        MA_stats['Bin'] = MA_stats['Timestep'] // 5 * 5
+        CA_stats['Bin'] = CA_stats['Timestep'] // 5 * 5
         # Plot results
         sns.lineplot(x='Bin', y='I', data=MA_stats, label='Mathematical model')
         sns.lineplot(x='Bin', y='I', data=CA_stats, label='Cellular model')
@@ -128,6 +129,9 @@ class Experiment:
 
 
 if __name__ == "__main__":
-
-    exp = Experiment((21, 21), N=3)
+    kwargs = {
+        "neighbours": "gauss", 
+        "nr_of_neighbours": 19,
+    }
+    exp = Experiment((21, 21), N=3, **kwargs)
     exp.run()

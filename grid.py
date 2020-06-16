@@ -1,10 +1,9 @@
 import copy
-import math
 import random
 import numpy as np
-import pandas as pd
 
-from typing import List, Any
+from IPython import get_ipython
+from IPython.display import display, clear_output
 
 import cell
 import matplotlib.pyplot as plt
@@ -76,6 +75,9 @@ class Grid:
         self.dead = dead
         self.delta = delta
         self.day = 0
+
+        # Set environment
+        self.in_notebook = self.in_notebook()
 
         # Set update method
         self.neighbours = neighbours
@@ -262,9 +264,25 @@ class Grid:
             done = self.step()
             # Update state if verbose
             if verbose:
-                print(f"[Timestep {len(history['S'])-1:3d}] " + "".join([f"{k}: {v[-1]:3d} " for k, v in history.items()]), end="\r")
+                message = f"[Timestep {len(history['S'])-1:3d}] " + "".join([f"{k}: {v[-1]:3d} " for k, v in history.items()])
+                if self.in_notebook:
+                    clear_output(wait=True)
+                    display(message)
+                else:
+                    print(message, end="\r")
+        # Final history update
+        history = {k: history[k] + [v] for k, v in self.count_states(model).items()}
         # Return history
         return history
+
+    @staticmethod
+    def in_notebook():
+        try:
+            if 'IPKernelApp' not in get_ipython().config:
+                return False
+        except ImportError:
+            return False
+        return True
 
     @classmethod
     def simulate(cls, *args, verbose=False, **kwargs):
