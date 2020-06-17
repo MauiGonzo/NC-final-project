@@ -13,8 +13,8 @@ class Grid:
     """
     grid object
     """
-    cell_list: List[List[cell.Cell]] = []
-    id_list: List[int] = []
+    cell_list = []
+    id_list = []
 
     def __init__(self,
                  width,
