@@ -15,7 +15,7 @@ class Grid:
     cell_list: List[List[cell.Cell]] = []
     id_list: List[int] = []
 
-    def __init__(self, width, height, radius, model='SIR'):
+    def __init__(self, width, height, radius, model='SIR', beta=0.76, inf_thr=2.2, exp_thr=5.2):
         """
         The __init__ method initializes the grid object
 
@@ -30,11 +30,11 @@ class Grid:
         self.radius = radius
         self.model = model
         # TODO: rewrite the transition from I -> R
-        self.infection_phase_threshold = 2.2
-        self.exposed_phase_threshold = 5.2
+        self.infection_phase_threshold = inf_thr
+        self.exposed_phase_threshold = exp_thr
 
         # TODO: rewrite, is this correct?
-        self.beta = 0.76
+        self.beta = beta
 
         # create list of Cells, with x and y coordinates
         self.cell_list = [[] for _ in range(self.width)]

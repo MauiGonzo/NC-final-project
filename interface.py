@@ -54,6 +54,13 @@ class CellViz(Canvas):
         """ Updates the grid. """
         for y, row in enumerate(self.cells):
             for x, cell in enumerate(row):
+                try:
+                    self.int2color(data.iloc[x, y]) if self.colors is None else self.colors[data.iloc[x, y]]
+                except IndexError:
+                    print(x, y)
+                    print(data.iloc[x, y])
+                    print(self.colors)
+                    print(self.int2color(3))
                 # Compute color if colors is not specified
                 c = self.int2color(data.iloc[x, y]) if self.colors is None else self.colors[data.iloc[x, y]]
                 self.itemconfig(cell, fill=c, outline=self.outline)

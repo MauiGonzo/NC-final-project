@@ -18,13 +18,16 @@ class SIRGui:
     FRAME_RATE = 1000           # Miliseconds per frame
     state_counts = []
 
-    def __init__(self, rows, cols, mode='auto', start_loc=(25, 25), model="SIR"):
+    def __init__(self, rows, cols, mode='auto', start_loc=(25, 25), model="SIR", beta=0.76, inf_thr=2.2, exp_thr=5.2):
         """ Constructs a window in which visualisation will take place. """
         # Store rows and cols
         self.rows = rows
         self.cols = cols
         self.start_loc = start_loc
         self.model = model
+        self.beta = beta
+        self.inf_thr = inf_thr
+        self.exp_thr = exp_thr
         # Create window
         self.window = Tk()
         self.window.title("SIR as a Cellular Automaton")
@@ -48,7 +51,7 @@ class SIRGui:
 
     def start(self):
         """ This method is run once before the simulation starts. """
-        self.SIR = Grid(self.cols, self.rows, radius=1, model=self.model)
+        self.SIR = Grid(self.cols, self.rows, radius=1, model=self.model, beta=self.beta, inf_thr=self.inf_thr, exp_thr=self.exp_thr)
         self.SIR.infect(self.start_loc[0], self.start_loc[1])
         self.store_state()
         data = pd.DataFrame(self.SIR.get_states())
