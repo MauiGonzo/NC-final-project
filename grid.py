@@ -2,6 +2,7 @@ import copy
 import random
 import numpy as np
 
+
 from IPython import get_ipython
 from IPython.display import display, clear_output
 
@@ -13,8 +14,8 @@ class Grid:
     """
     grid object
     """
-    cell_list: List[List[cell.Cell]] = []
-    id_list: List[int] = []
+    cell_list = []
+    id_list = []
 
     def __init__(self,
                  width,
@@ -26,8 +27,10 @@ class Grid:
                  infected = 1,
                  rho = 0.0,
                  dead = 0,
-                 delta = 0.0,
+                 delta = 0.2,
                  neighbours='radius',
+                 model='SIR',
+                 modeltype = 'S-based',
                  **kwargs):
         """
         The __init__ method initializes the grid object
@@ -75,9 +78,12 @@ class Grid:
         self.dead = dead
         self.delta = delta
         self.day = 0
+        self.model = model
+        self.exposed_phase_threshold = 5.2
+        self.modeltype = modeltype
 
-        # Set environment
-        self.in_notebook = self.in_notebook()
+        # # Set environment
+        # self.in_notebook = self.in_notebook()
 
         # Set update method
         self.neighbours = neighbours
@@ -172,7 +178,7 @@ class Grid:
             self.cell_list[x][y].compartment_table.append(state)
             return 'R'
         # Set initial counts to 0
-        neighbor_states = {'S': 0, 'I': 0, 'R': 0}
+        neighbor_states = {'S': 0, 'I': 0, 'R': 0, 'E': 0}
         # Count states of neighbours
         if self.neighbours == 'all':
             for c in range(self.width):
@@ -194,11 +200,53 @@ class Grid:
             # Make sure there is at least one infection
             if not self.has_infected:
                 self.has_infected = True
-            return 'I'
+            if self.model == 'SIR':
+                return 'I'
+            elif self.model == 'SEIR':
+                return 'E'
         elif state == 'I' and chance < self.gamma and self.has_infected:
             return 'R'
+        elif state == 'E' and chance < self.exposed_phase_threshold :
+            return 'I'
         else:
             return state
+
+    def cell_behaviour(self, x, y):
+
+        state = self.cell_list[x][y].compartment
+
+        if state == "I":
+            if random.random() < self.gamma:
+                transition = True
+            else:
+                transition = False
+
+            if 1 <= self.beta:
+                infect_count = np.floor(self.beta)
+            else:
+                infect_count = 0
+
+            if random.random() < self.beta % 1:
+                infect_count += 1
+
+            neighbourlist = []
+            for x, y in self.get_neighbours(x, y):
+                if self.cell_list[x][y].compartment == 'S':
+                    neighbourlist.append((x, y))
+
+            if not neighbourlist:
+                return transition, []
+            elif len(neighbourlist) > infect_count:
+                for _ in range(len(neighbourlist) - infect_count):
+                    neighbourlist.remove(random.choice(neighbourlist))
+            return transition, neighbourlist
+
+        elif state == "E":
+            if random.random() < self.delta:
+                transition = True
+            else:
+                transition = False
+            return transition, []
 
     def step(self):
         """ Steps one day ahead. Evaluates the state of all cells in the grid. """
@@ -209,20 +257,36 @@ class Grid:
         # new_agg_day = [0] * len(self.model_type)
         for col in range(self.width):
             for row in range(self.height):
-                new_state = self.evaluate_cell(col, row)
-                if new_state == 'I':
-                    done = False
-                temp[col][row].compartment = new_state
-                temp[col][row].add_compartment_day(temp[col][row].compartment)
-                # evaluate the new aggregated states
-                # TODO: je kan dit waarschijnlijk ook doen met een index functie, voor alle modellen zonder veel if's
-                # if self.model_type == 'SIR':
-                #     if temp[col][row].compartment == 'S':
-                #         new_agg_day[0] += 1
-                #     if temp[col][row].compartment == 'I':
-                #         new_agg_day[1] += 1
-                #     if temp[col][row].compartment == 'R':
-                #         new_agg_day[2] += 1
+                if self.modeltype == "S-based":
+                    new_state = self.evaluate_cell(col, row)
+                    if new_state == 'I':
+                        done = False
+                    temp[col][row].compartment = new_state
+                    temp[col][row].add_compartment_day(temp[col][row].compartment)
+                    # evaluate the new aggregated states
+                    # TODO: je kan dit waarschijnlijk ook doen met een index functie, voor alle modellen zonder veel if's
+                    # if self.model_type == 'SIR':
+                    #     if temp[col][row].compartment == 'S':
+                    #         new_agg_day[0] += 1
+                    #     if temp[col][row].compartment == 'I':
+                    #         new_agg_day[1] += 1
+                    #     if temp[col][row].compartment == 'R':
+                    #         new_agg_day[2] += 1
+                else:
+                    if self.cell_list[col][row].compartment == 'I':
+                        transition, neighbours = self.cell_behaviour(col, row)
+                        if transition:
+                            temp[col][row].compartment = 'R'
+                        if neighbours:
+                            for (nc, nr) in neighbours:
+                                if temp[nc][nr].compartment == 'S' and self.model == 'SIR':
+                                    temp[nc][nr].compartment = 'I'
+                                elif temp[nc][nr].compartment == 'S' and self.model == 'SEIR':
+                                    temp[nc][nr].compartment = 'E'
+                    elif self.cell_list[col][row].compartment == 'E':
+                        transition, _ = self.cell_behaviour(col, row)
+                        if transition:
+                            temp[col][row].compartment = 'I'
         self.cell_list = temp
         return done
 
@@ -236,7 +300,7 @@ class Grid:
 
     def get_states(self):
         """ Returns a grid of state indicators. """
-        classes = ['S', 'I', 'R']
+        classes = ['S', 'I', 'R', 'E']
         states = [[] for _ in range(self.width)]
         for col in range(self.width):
             for row in range(self.height):
