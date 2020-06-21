@@ -230,9 +230,15 @@ class Grid:
                 infect_count += 1
 
             neighbourlist = []
-            for x, y in self.get_neighbours(x, y):
-                if self.cell_list[x][y].compartment == 'S':
-                    neighbourlist.append((x, y))
+            if self.neighbours == 'all':
+                for c in range(self.width):
+                    for r in range(self.height):
+                        if (c, r) != (x, y) and self.cell_list[c][r].compartment == 'S':
+                            neighbourlist.append((c, r))
+            else:
+                for x, y in self.get_neighbours(x, y):
+                    if self.cell_list[x][y].compartment == 'S':
+                        neighbourlist.append((x, y))
 
             if not neighbourlist:
                 return transition, []
@@ -275,8 +281,12 @@ class Grid:
                 else:
                     if self.cell_list[col][row].compartment == 'I':
                         transition, neighbours = self.cell_behaviour(col, row)
+                        if len(neighbours) > 0:
+                            done = False
                         if transition:
                             temp[col][row].compartment = 'R'
+                        else:
+                            done = False
                         if neighbours:
                             for (nc, nr) in neighbours:
                                 if temp[nc][nr].compartment == 'S' and self.model == 'SIR':
@@ -287,6 +297,8 @@ class Grid:
                         transition, _ = self.cell_behaviour(col, row)
                         if transition:
                             temp[col][row].compartment = 'I'
+                            done = False
+
         self.cell_list = temp
         return done
 
@@ -349,7 +361,7 @@ class Grid:
         return True
 
     @classmethod
-    def simulate(cls, *args, verbose=False, **kwargs):
+    def simulate(cls, *args, verbose=False, model='SIR', **kwargs):
         """ Runs a full simulation. """
         grid = cls(*args, **kwargs)
         modified = []
@@ -369,7 +381,7 @@ class Grid:
                 grid.kill(x, y)
                 modified.append((x, y))
                 dead += 1
-        return grid.run(verbose)
+        return grid.run(verbose, model)
 
 if __name__ == "__main__":
     myGrid = Grid(9, 9)
