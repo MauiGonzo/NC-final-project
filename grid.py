@@ -82,9 +82,6 @@ class Grid:
         self.exposed_phase_threshold = 5.2
         self.modeltype = modeltype
 
-        # # Set environment
-        # self.in_notebook = self.in_notebook()
-
         # Set update method
         self.neighbours = neighbours
         self.radius = kwargs.get('radius', 1)
@@ -101,9 +98,6 @@ class Grid:
         self.p_infect = self.beta / self.nr_of_neighbours
 
         self.model_type = kwargs.get('model_type', 'SIR')
-        # # self.agg_compartments = [[0] * len(self.model_type)]
-        # # TODO: rewrite the transition from I -> R
-        # self.infection_phase_threshold = 7
 
         # create list of Cells, with x and y coordinates
         self.cell_list = [[] for _ in range(self.width)]
@@ -174,7 +168,6 @@ class Grid:
         state = self.cell_list[x][y].compartment
         # If state is recovered, no further computing is needed
         if state == 'R':
-            # TODO: check if this append is required
             self.cell_list[x][y].compartment_table.append(state)
             return 'R'
         # Set initial counts to 0
@@ -185,11 +178,6 @@ class Grid:
                 for r in range(self.height):
                     if (c, r) != (x, y):
                         neighbor_states[self.cell_list[c][r].compartment] += 1
-        # elif self.neighbours == 'gradient':
-        #     for c in range(self.width):
-        #         for r in range(self.height):
-        #             if (c, r) != (x, y):
-        #                 neighbor_states[self.cell_list[c][r].compartment] += math.log10(1-(1/self.get_dist((c, r), (x, y)))+1e-9)
         else:
             for x, y in self.get_neighbours(x, y):
                 neighbor_states[self.cell_list[x][y].compartment] += 1
@@ -212,7 +200,7 @@ class Grid:
             return state
 
     def cell_behaviour(self, x, y):
-
+        """ Handles cell behaviour for I-based updating. """
         state = self.cell_list[x][y].compartment
 
         if state == "I":
@@ -269,15 +257,6 @@ class Grid:
                         done = False
                     temp[col][row].compartment = new_state
                     temp[col][row].add_compartment_day(temp[col][row].compartment)
-                    # evaluate the new aggregated states
-                    # TODO: je kan dit waarschijnlijk ook doen met een index functie, voor alle modellen zonder veel if's
-                    # if self.model_type == 'SIR':
-                    #     if temp[col][row].compartment == 'S':
-                    #         new_agg_day[0] += 1
-                    #     if temp[col][row].compartment == 'I':
-                    #         new_agg_day[1] += 1
-                    #     if temp[col][row].compartment == 'R':
-                    #         new_agg_day[2] += 1
                 else:
                     if self.cell_list[col][row].compartment == 'I':
                         transition, neighbours = self.cell_behaviour(col, row)
@@ -384,24 +363,4 @@ class Grid:
         return grid.run(verbose, model)
 
 if __name__ == "__main__":
-    myGrid = Grid(9, 9)
-    # state = myGrid.state(1, 1)
-    # print("state van 1, 1, is: " + state)
-    myGrid.infect(4, 4)
-    myGrid.step()
-    for i in range(50):
-        myGrid.step()
-
-    # plot testje
-    lbl = ['S', 'I', 'R']
-    x = range(len(myGrid.agg_compartments))
-    y = myGrid.agg_compartments
-    plt.xlabel("Days")
-    plt.ylabel("nr of persons")
-    plt.title("SIR Compartments vs days")
-    for i in range(len(y[0])):
-        plt.plot(x, [pt[i] for pt in y], label='compartment {}'.format(lbl[i]))
-    plt.legend()
-    plt.show()
-
-    print("klaar")
+    print(Grid.simulate(20, 20, 2.2))
