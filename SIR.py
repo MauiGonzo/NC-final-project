@@ -2,7 +2,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 def SIR(N, R_0, infectious, I_0, t, model='SIR', incubation=5.2, alpha = 0.05, death = 6, plot_results=False):
-
+    """ Implementation of the Mathematical SIR model. Also works for SIER and SIERD. """
     check1 = False
     check2 = False
 
@@ -83,14 +83,12 @@ def SIR(N, R_0, infectious, I_0, t, model='SIR', incubation=5.2, alpha = 0.05, d
         I_array.append(I)
         R_array.append(R)
         D_array.append(D)
-        
+
         if I < 0.5:
             done = True
-        
-
 
     X = np.arange(len(S_array))
-    
+
     if plot_results:
         plt.plot(X, S_array, label='Susceptible')
         if check1:

@@ -1,4 +1,4 @@
-#Ideas for experiments
+# Ideas for experiments
 
 In general finding out wat it means to evaluate the same model with Cellular Automatons
 Possibly we need to do multiple runs to derive a distribution
@@ -22,7 +22,7 @@ in the paper of Textor, the model was fitted to the data, leading to R_t values,
 ### gridsize
 All experiments a to be conducted with grid size .... being the optimum between size and runtime.
 
-Typical values for `beta` as demonstrated in [https://science.sciencemag.org/content/368/6490/489] (bibtext in the report: li2020substantial:
+Typical values for `beta` as demonstrated in [this work](https://science.sciencemag.org/content/368/6490/489), bibtext in the report: li2020substantial:
  * 0.52 (95% CI: 0.42–0.72) in period 1
  * 0.35 (95% CI: 0.28–0.45) in period 2
  
