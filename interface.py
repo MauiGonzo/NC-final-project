@@ -5,11 +5,11 @@ import pandas as pd
 import seaborn as sn
 
 import matplotlib
-matplotlib.use("Tkagg")
+# matplotlib.use("Tkagg")
 import matplotlib.pyplot as plt
 
 from tkinter import *
-from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
+# from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 
 
 class CellViz(Canvas):
@@ -145,44 +145,44 @@ class Plot(Frame):
     #     values = [val for pair in zip(X, Y) for val in pair]
     #     self.poly = self.create_polygon(values, width=1, fill="red")
 
-    def draw_figure(self, canvas, figure, loc=(0, 0)):
-        """ Draw a matplotlib figure onto a Tk canvas
+#     def draw_figure(self, canvas, figure, loc=(0, 0)):
+#         """ Draw a matplotlib figure onto a Tk canvas
 
-        loc: location of top-left corner of figure on canvas in pixels.
-        Inspired by matplotlib source: lib/matplotlib/backends/backend_tkagg.py
-        """
-        f = matplotlib.figure.Figure(figsize=(self.winfo_width(), self.winfo_height()), dpi=100)
-        a = f.add_subplot(111)
-        a.stackplot([0,0.1,0.2,0.3], [1,0.9,0.8,0.7])
+#         loc: location of top-left corner of figure on canvas in pixels.
+#         Inspired by matplotlib source: lib/matplotlib/backends/backend_tkagg.py
+#         """
+#         f = matplotlib.figure.Figure(figsize=(self.winfo_width(), self.winfo_height()), dpi=100)
+#         a = f.add_subplot(111)
+#         a.stackplot([0,0.1,0.2,0.3], [1,0.9,0.8,0.7])
 
 
-        can = FigureCanvasTkAgg(f, self)
-        can.draw()
-        can.get_tk_widget().pack(side=BOTTOM, fill=BOTH, expand=True)
-        # figure_x, figure_y, figure_w, figure_h = figure.bbox.bounds
-        # figure_w, figure_h = int(figure_w), int(figure_h)
-        # photo = PhotoImage(master=canvas, width=figure_w, height=figure_h)
+#         can = FigureCanvasTkAgg(f, self)
+#         can.draw()
+#         can.get_tk_widget().pack(side=BOTTOM, fill=BOTH, expand=True)
+#         # figure_x, figure_y, figure_w, figure_h = figure.bbox.bounds
+#         # figure_w, figure_h = int(figure_w), int(figure_h)
+#         # photo = PhotoImage(master=canvas, width=figure_w, height=figure_h)
 
-        # # Position: convert from top-left anchor to center anchor
-        # canvas.create_image(loc[0] + figure_w/2, loc[1] + figure_h/2, image=photo)
+#         # # Position: convert from top-left anchor to center anchor
+#         # canvas.create_image(loc[0] + figure_w/2, loc[1] + figure_h/2, image=photo)
 
-        # # Unfortunately, there's no accessor for the pointer to the native renderer
-        # blit(photo, figure_canvas_agg.get_renderer()._renderer, colormode=2)
+#         # # Unfortunately, there's no accessor for the pointer to the native renderer
+#         # blit(photo, figure_canvas_agg.get_renderer()._renderer, colormode=2)
 
-        # # Return a handle which contains a reference to the photo object
-        # # which must be kept live or else the picture disappears
-        # return photo
+#         # # Return a handle which contains a reference to the photo object
+#         # # which must be kept live or else the picture disappears
+#         # return photo
 
-    def draw(self):
-        """ Draws a plot to plot class values in. """
-        print(sn.axes_style())
-        self.figure = matplotlib.figure.Figure()
-        self.subplot = self.figure.add_subplot(111)
-        self.subplot.stackplot(range(self.data.shape[1]), self.data)
+#     def draw(self):
+#         """ Draws a plot to plot class values in. """
+#         print(sn.axes_style())
+#         self.figure = matplotlib.figure.Figure()
+#         self.subplot = self.figure.add_subplot(111)
+#         self.subplot.stackplot(range(self.data.shape[1]), self.data)
 
-        self.canvas = FigureCanvasTkAgg(self.figure, self)
-        self.canvas.draw()
-        self.canvas.get_tk_widget().pack(side=BOTTOM, fill=BOTH, expand=True)
+#         self.canvas = FigureCanvasTkAgg(self.figure, self)
+#         self.canvas.draw()
+#         self.canvas.get_tk_widget().pack(side=BOTTOM, fill=BOTH, expand=True)
 
 
 if __name__ == "__main__":
